@@ -1,0 +1,25 @@
+---
+description: Respondr project context and canonical reference
+alwaysApply: true
+---
+
+# Respondr Project Context
+
+**Name**: Respondr – Barangay Disaster Reporting and Response System with Geo-Tagging.
+
+**Goal**: Centralized, real-time platform for Noveleta's barangays (starting with San Antonio 1) for geotagged incident reporting, response coordination, disaster alerting, and evacuation-center awareness.
+
+**Users**:
+- Residents: report incidents, receive alerts
+- Barangay Officials: verify reports, broadcast alerts/announcements, dashboard
+- System Admin: oversight, user management, analytics
+
+**Features**: Geo-tagged incident reports (flooding, fires, power outages, blocked roads) with images; push + SMS alerts (Semaphore); map (incidents, evacuation centers, barangay halls, hospitals); admin dashboard.
+
+**Tech stack**: React (Vite, web), React Native (Expo, mobile), Node.js + Express, PostgreSQL, Firebase (Auth, Storage), OpenStreetMap + Leaflet (web maps), Expo Location/MapView (mobile), Semaphore (SMS), FCM (push).
+
+**Scope**: Initially Barangay San Antonio 1, Noveleta, Cavite.
+
+**Development constraints (hard rules)**: Web-first; mobile is resident-only (no admin on mobile); functional > polished UI; no major rewrites after a sprint; solo dev, ~15–18 hrs/week, 5 months. API base: `/api/v1`. Optimize for thesis defense readiness, not commercial scale.
+
+**Authoritative docs** (in respondr-backend repo): `docs/DEVELOPMENT_MANIFEST.md`, `docs/references/IS295_Rebadavia_Manuscript.pdf`.
