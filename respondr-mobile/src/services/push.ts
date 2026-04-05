@@ -6,6 +6,14 @@ import { env } from '../config/env';
 
 const DEVICE_TOKEN_KEY = 'respondr.device_token';
 
+export type PushRegistrationResult =
+  | { registered: true; token: string }
+  | {
+      registered: false;
+      reason: 'permission_denied' | 'missing_project_id' | 'token_unavailable' | 'register_failed';
+      message?: string;
+    };
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: false,
@@ -25,7 +33,7 @@ function getProjectId() {
   return env.easProjectId || easFromConfig || '';
 }
 
-export async function ensurePushRegistration() {
+export async function ensurePushRegistration(): Promise<PushRegistrationResult> {
   const settings = await Notifications.getPermissionsAsync();
   let finalStatus = settings.status;
 
@@ -48,10 +56,15 @@ export async function ensurePushRegistration() {
     return { registered: false, reason: 'token_unavailable' as const };
   }
 
-  await apiAuthRequest('/devices/register', {
-    method: 'POST',
-    body: JSON.stringify({ fcm_token: pushToken }),
-  });
+  try {
+    await apiAuthRequest('/devices/register', {
+      method: 'POST',
+      body: JSON.stringify({ fcm_token: pushToken }),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to register device token';
+    return { registered: false, reason: 'register_failed', message };
+  }
 
   await AsyncStorage.setItem(DEVICE_TOKEN_KEY, pushToken);
   return { registered: true, token: pushToken as string };

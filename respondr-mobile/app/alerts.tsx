@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { apiAuthRequest } from '../src/services/api';
+import type { ApiError } from '../src/services/api';
 import type { AlertItem } from '../src/types';
 import { StatusBanner } from '../components/StatusBanner';
 import { useTheme } from '../hooks/use-theme-color';
@@ -112,39 +113,43 @@ function AlertCard({ item }: { item: AlertItem }) {
 export default function AlertsScreen() {
   const theme = useTheme();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [lastNotificationTitle, setLastNotificationTitle] = useState('');
 
   const receivedSubscription = useRef<Notifications.EventSubscription | null>(null);
 
-  const loadAlerts = async () => {
-    setLoading(true);
+  const loadAlerts = async (mode: 'initial' | 'refresh' = 'refresh') => {
+    if (mode === 'initial') setInitialLoading(true);
+    if (mode === 'refresh') setRefreshing(true);
     setError('');
     try {
       const result = await apiAuthRequest<AlertItem[]>('/alerts?limit=50');
       setAlerts(Array.isArray(result) ? result : []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load alerts';
+      const errorPayload = err as ApiError | undefined;
+      const message = errorPayload?.message || 'Failed to load alerts';
       setError(message);
     } finally {
-      setLoading(false);
+      if (mode === 'initial') setInitialLoading(false);
+      if (mode === 'refresh') setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadAlerts();
+    loadAlerts('initial');
 
     receivedSubscription.current = Notifications.addNotificationReceivedListener((event) => {
       const title = event.request.content.title || 'Push notification received';
       setLastNotificationTitle(title);
-      loadAlerts();
+      loadAlerts('refresh');
     });
 
     return () => { receivedSubscription.current?.remove(); };
   }, []);
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background }}>
         <ActivityIndicator color={theme.primary} size="large" />
@@ -187,7 +192,8 @@ export default function AlertsScreen() {
         </View>
 
         <Pressable
-          onPress={loadAlerts}
+          onPress={() => loadAlerts('refresh')}
+          disabled={refreshing}
           style={({ pressed }) => ({
             backgroundColor: theme.background,
             borderWidth: 1,
@@ -198,11 +204,11 @@ export default function AlertsScreen() {
             flexDirection: 'row',
             alignItems: 'center',
             gap: Spacing.xs,
-            opacity: pressed ? 0.7 : 1,
+            opacity: pressed || refreshing ? 0.7 : 1,
           })}
         >
           <Text style={{ fontSize: FontSize.sm, color: theme.textSecondary, fontWeight: FontWeight.medium }}>
-            ↻ Refresh
+            {refreshing ? 'Refreshing…' : '↻ Refresh'}
           </Text>
         </Pressable>
       </View>
@@ -233,6 +239,8 @@ export default function AlertsScreen() {
         <FlatList
           data={alerts}
           keyExtractor={(item) => item.id}
+          refreshing={refreshing}
+          onRefresh={() => loadAlerts('refresh')}
           contentContainerStyle={{
             paddingHorizontal: Spacing.xl,
             paddingTop: Spacing.lg,

@@ -64,7 +64,7 @@ export const Colors = {
     border: Palette.slate200,
     borderStrong: Palette.slate300,
 
-    headerBg: Palette.navy900,
+    headerBg: Palette.navy700,
     headerText: Palette.white,
     headerTint: Palette.white,
 
