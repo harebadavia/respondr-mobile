@@ -1,4 +1,3 @@
-import { useColorScheme } from 'react-native';
 import { Colors } from '../constants/theme';
 
 type ThemeName = keyof typeof Colors;
@@ -8,7 +7,7 @@ export function useThemeColor(
   props: { light?: string; dark?: string },
   colorName: ColorName
 ) {
-  const theme = (useColorScheme() ?? 'light') as ThemeName;
+  const theme = 'light' as ThemeName;
   const colorFromProps = props[theme];
 
   if (colorFromProps) {
@@ -20,6 +19,5 @@ export function useThemeColor(
 
 /** Convenience: returns the full color object for the active theme. */
 export function useTheme() {
-  const scheme = (useColorScheme() ?? 'light') as ThemeName;
-  return Colors[scheme];
+  return Colors.light;
 }

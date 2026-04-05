@@ -54,7 +54,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const user = await hydrateBackendUser();
         setBackendUser(user);
-        await ensurePushRegistration();
+        try {
+          await ensurePushRegistration();
+        } catch {
+          // Push registration must never block authenticated app use.
+        }
       } catch {
         setBackendUser(null);
       } finally {
@@ -69,7 +73,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithEmailAndPassword(auth, email.trim(), password);
     const user = await hydrateBackendUser();
     setBackendUser(user);
-    await ensurePushRegistration();
+    try {
+      await ensurePushRegistration();
+    } catch {
+      // Push registration must never block authenticated app use.
+    }
   };
 
   const register = async ({ email, password, firstName, lastName, phoneNumber }: RegisterPayload) => {
@@ -89,7 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const user = await hydrateBackendUser();
     setBackendUser(user);
-    await ensurePushRegistration();
+    try {
+      await ensurePushRegistration();
+    } catch {
+      // Push registration must never block authenticated app use.
+    }
   };
 
   const logout = async () => {
