@@ -1,9 +1,13 @@
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, Text, View } from 'react-native';
 import { AppInput } from '../components/AppInput';
+import { AppButton } from '../components/AppButton';
+import { StatusBanner } from '../components/StatusBanner';
 import { useAuth } from '../src/context/AuthContext';
 import { env } from '../src/config/env';
+import { useTheme } from '../hooks/use-theme-color';
+import { FontSize, FontWeight, Palette, Radius, Spacing } from '../constants/theme';
 
 type ErrorLike = {
   message?: string;
@@ -40,6 +44,7 @@ function formatError(err: unknown) {
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const theme = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,10 +57,7 @@ export default function LoginScreen() {
       await login(email, password);
       router.replace('/home');
     } catch (err) {
-      console.warn('Login failed:', {
-        error: err,
-        apiBaseUrl: env.apiBaseUrl,
-      });
+      console.warn('Login failed:', { error: err, apiBaseUrl: env.apiBaseUrl });
       setError(formatError(err));
     } finally {
       setLoading(false);
@@ -63,31 +65,125 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
-      <Text style={{ fontSize: 26, fontWeight: '700', marginBottom: 20 }}>Welcome Back</Text>
-      <AppInput label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" />
-      <AppInput label="Password" value={password} onChangeText={setPassword} secureTextEntry />
-
-      {error ? <Text style={{ color: '#dc2626', marginBottom: 12 }}>{error}</Text> : null}
-
-      <Pressable
-        onPress={handleLogin}
-        disabled={loading}
-        style={{
-          backgroundColor: '#0f766e',
-          borderRadius: 10,
-          paddingVertical: 14,
-          alignItems: 'center',
-          marginTop: 8,
-          opacity: loading ? 0.7 : 1,
-        }}
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.headerBg }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '700' }}>Login</Text>}
-      </Pressable>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* ── Brand header ── */}
+          <View
+            style={{
+              backgroundColor: theme.headerBg,
+              paddingHorizontal: Spacing.xl,
+              paddingTop: Spacing['3xl'],
+              paddingBottom: Spacing['3xl'],
+              alignItems: 'flex-start',
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: theme.primary,
+                borderRadius: Radius.sm,
+                paddingHorizontal: Spacing.sm + 2,
+                paddingVertical: 3,
+                marginBottom: Spacing.md,
+              }}
+            >
+              <Text
+                style={{
+                  color: Palette.white,
+                  fontSize: FontSize.xs,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                  textTransform: 'uppercase',
+                }}
+              >
+                RESPONDR
+              </Text>
+            </View>
+            <Text
+              style={{
+                fontSize: FontSize['3xl'],
+                fontWeight: FontWeight.extrabold,
+                color: Palette.white,
+                letterSpacing: 0.2,
+              }}
+            >
+              Welcome back
+            </Text>
+            <Text
+              style={{
+                fontSize: FontSize.md,
+                color: 'rgba(255,255,255,0.55)',
+                marginTop: Spacing.xs,
+              }}
+            >
+              Sign in to continue
+            </Text>
+          </View>
 
-      <Text style={{ marginTop: 14, textAlign: 'center' }}>
-        No account yet? <Link href="/register">Create one</Link>
-      </Text>
-    </View>
+          {/* ── Form card ── */}
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: theme.background,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              paddingHorizontal: Spacing.xl,
+              paddingTop: Spacing['2xl'],
+              paddingBottom: Spacing['3xl'],
+            }}
+          >
+            <AppInput
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              placeholder="you@example.com"
+            />
+            <AppInput
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholder="••••••••"
+            />
+
+            {error ? <StatusBanner message={error} variant="error" /> : null}
+
+            <AppButton
+              label="Sign In"
+              onPress={handleLogin}
+              loading={loading}
+              style={{ marginTop: Spacing.sm }}
+            />
+
+            <Text
+              style={{
+                marginTop: Spacing.xl,
+                textAlign: 'center',
+                fontSize: FontSize.sm,
+                color: theme.textSecondary,
+              }}
+            >
+              No account yet?{' '}
+              <Link
+                href="/register"
+                style={{
+                  color: theme.primary,
+                  fontWeight: FontWeight.semibold,
+                }}
+              >
+                Create one
+              </Link>
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

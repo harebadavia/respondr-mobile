@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
+import { useTheme } from '../hooks/use-theme-color';
+import { FontSize, FontWeight, Radius, Spacing } from '../constants/theme';
 
 type Props = {
   label: string;
@@ -19,24 +22,45 @@ export function AppInput({
   multiline,
   keyboardType = 'default',
 }: Props) {
+  const theme = useTheme();
+  const [focused, setFocused] = useState(false);
+
   return (
-    <View style={{ marginBottom: 12 }}>
-      <Text style={{ marginBottom: 6, fontWeight: '600' }}>{label}</Text>
+    <View style={{ marginBottom: Spacing.lg }}>
+      <Text
+        style={{
+          marginBottom: Spacing.xs,
+          fontSize: FontSize.sm,
+          fontWeight: FontWeight.semibold,
+          color: theme.textSecondary,
+          letterSpacing: 0.4,
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+      </Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
+        placeholderTextColor={theme.textMuted}
         secureTextEntry={secureTextEntry}
         multiline={multiline}
         keyboardType={keyboardType}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         style={{
-          borderWidth: 1,
-          borderColor: '#d1d5db',
-          borderRadius: 10,
-          paddingHorizontal: 12,
-          paddingVertical: multiline ? 10 : 12,
-          minHeight: multiline ? 90 : 48,
+          borderWidth: focused ? 1.5 : 1,
+          borderColor: focused ? theme.primary : theme.border,
+          borderRadius: Radius.md,
+          paddingHorizontal: Spacing.lg,
+          paddingVertical: multiline ? Spacing.md : 0,
+          minHeight: multiline ? 96 : 50,
           textAlignVertical: multiline ? 'top' : 'center',
+          fontSize: FontSize.md,
+          color: theme.text,
+          backgroundColor: theme.surface,
+          fontWeight: FontWeight.normal,
         }}
       />
     </View>

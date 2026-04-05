@@ -4,14 +4,14 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { AppInput } from '../components/AppInput';
+import { AppButton } from '../components/AppButton';
+import { StatusBanner } from '../components/StatusBanner';
 import { apiAuthRequest } from '../src/services/api';
 import type { IncidentCategory } from '../src/types';
+import { useTheme } from '../hooks/use-theme-color';
+import { FontSize, FontWeight, Radius, Shadow, Spacing } from '../constants/theme';
 
-type Coordinates = {
-  latitude: number;
-  longitude: number;
-};
-
+type Coordinates = { latitude: number; longitude: number };
 type SelectedPhoto = {
   uri: string;
   fileName: string;
@@ -20,24 +20,103 @@ type SelectedPhoto = {
   height?: number;
   sizeBytes?: number;
 };
-
-type CreatedIncident = {
-  id: string;
-};
+type CreatedIncident = { id: string };
 
 function flattenSubcategories(categories: IncidentCategory[]) {
   const out: IncidentCategory[] = [];
   for (const parent of categories) {
     if (Array.isArray(parent.subcategories)) {
-      for (const sub of parent.subcategories) {
-        out.push(sub);
-      }
+      for (const sub of parent.subcategories) out.push(sub);
     }
   }
   return out;
 }
 
+// ── Section label component ──────────────────────────────────────────────────
+function SectionLabel({ children }: { children: string }) {
+  const theme = useTheme();
+  return (
+    <Text
+      style={{
+        fontSize: FontSize.xs,
+        fontWeight: FontWeight.bold,
+        color: theme.textSecondary,
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+        marginBottom: Spacing.sm,
+        marginTop: Spacing.xs,
+      }}
+    >
+      {children}
+    </Text>
+  );
+}
+
+// ── Capture button component ─────────────────────────────────────────────────
+type CaptureButtonProps = {
+  onPress: () => void;
+  captured: boolean;
+  capturedLabel: string;
+  defaultLabel: string;
+  icon: string;
+  accentColor?: string;
+};
+
+function CaptureButton({ onPress, captured, capturedLabel, defaultLabel, icon, accentColor }: CaptureButtonProps) {
+  const theme = useTheme();
+  const bg = captured ? theme.secondaryBg : theme.surface;
+  const border = captured ? theme.secondary : theme.border;
+  const textColor = captured ? theme.secondary : theme.textSecondary;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        backgroundColor: bg,
+        borderWidth: 1.5,
+        borderColor: border,
+        borderRadius: Radius.md,
+        paddingVertical: Spacing.lg,
+        paddingHorizontal: Spacing.xl,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+        opacity: pressed ? 0.8 : 1,
+        ...Shadow.sm,
+      })}
+    >
+      <Text style={{ fontSize: 18 }}>{icon}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: textColor }}>
+          {captured ? capturedLabel : defaultLabel}
+        </Text>
+        {captured && (
+          <Text style={{ fontSize: FontSize.xs, color: theme.secondary, marginTop: 2 }}>
+            Tap to recapture
+          </Text>
+        )}
+      </View>
+      {captured && (
+        <View
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: Radius.full,
+            backgroundColor: theme.secondary,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ color: '#fff', fontSize: 12, fontWeight: FontWeight.bold }}>✓</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+// ── Main screen ──────────────────────────────────────────────────────────────
 export default function IncidentCreateScreen() {
+  const theme = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categories, setCategories] = useState<IncidentCategory[]>([]);
@@ -63,30 +142,21 @@ export default function IncidentCreateScreen() {
         setLoadingCategories(false);
       }
     }
-
     loadCategories();
   }, []);
 
   const handleLocate = async () => {
     setError('');
     const permission = await Location.requestForegroundPermissionsAsync();
-    if (!permission.granted) {
-      setError('Location permission denied');
-      return;
-    }
-
+    if (!permission.granted) { setError('Location permission denied'); return; }
     const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
     setCoords({ latitude: current.coords.latitude, longitude: current.coords.longitude });
   };
 
   const handleCapturePhoto = async () => {
     setError('');
-
     const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!cameraPermission.granted) {
-      setError('Camera permission denied');
-      return;
-    }
+    if (!cameraPermission.granted) { setError('Camera permission denied'); return; }
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
@@ -94,9 +164,7 @@ export default function IncidentCreateScreen() {
       allowsEditing: false,
     });
 
-    if (result.canceled || !result.assets[0]) {
-      return;
-    }
+    if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
     const info = await FileSystem.getInfoAsync(asset.uri);
@@ -108,16 +176,8 @@ export default function IncidentCreateScreen() {
     }
 
     const size = info.exists && 'size' in info && typeof info.size === 'number' ? info.size : undefined;
-
-    if (!size) {
-      setError('Unable to determine image size for attachment metadata');
-      return;
-    }
-
-    if (size > 400 * 1024) {
-      setError('Image is too large (>400KB). Please retake with lower detail.');
-      return;
-    }
+    if (!size) { setError('Unable to determine image size for attachment metadata'); return; }
+    if (size > 400 * 1024) { setError('Image is too large (>400KB). Please retake with lower detail.'); return; }
 
     setPhoto({
       uri: asset.uri,
@@ -133,23 +193,11 @@ export default function IncidentCreateScreen() {
     setError('');
     setSuccess('');
 
-    if (!title.trim() || !description.trim()) {
-      setError('Title and description are required');
-      return;
-    }
-
-    if (!selectedCategoryId) {
-      setError('Please select a category');
-      return;
-    }
-
-    if (!coords) {
-      setError('Please capture your current location');
-      return;
-    }
+    if (!title.trim() || !description.trim()) { setError('Title and description are required'); return; }
+    if (!selectedCategoryId) { setError('Please select a category'); return; }
+    if (!coords) { setError('Please capture your current location'); return; }
 
     setLoading(true);
-
     try {
       const incident = await apiAuthRequest<CreatedIncident>('/incidents', {
         method: 'POST',
@@ -190,89 +238,131 @@ export default function IncidentCreateScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 20 }}>
-      <Text style={{ fontSize: 22, fontWeight: '700', marginBottom: 10 }}>Report Incident</Text>
-      <Text style={{ color: '#4b5563', marginBottom: 18 }}>
-        Week 11 core flow: category + GPS + camera metadata attachment.
+    <ScrollView
+      style={{ backgroundColor: theme.background }}
+      contentContainerStyle={{ padding: Spacing.xl, paddingBottom: Spacing['4xl'] }}
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* Header */}
+      <Text
+        style={{
+          fontSize: FontSize['2xl'],
+          fontWeight: FontWeight.extrabold,
+          color: theme.text,
+          letterSpacing: 0.2,
+          marginBottom: Spacing.xs,
+        }}
+      >
+        Report Incident
+      </Text>
+      <Text
+        style={{
+          fontSize: FontSize.sm,
+          color: theme.textSecondary,
+          marginBottom: Spacing['2xl'],
+          lineHeight: 20,
+        }}
+      >
+        Provide details, select a category, and attach your GPS location.
       </Text>
 
-      <AppInput label="Title" value={title} onChangeText={setTitle} />
-      <AppInput label="Description" value={description} onChangeText={setDescription} multiline />
+      {/* ── Details section ── */}
+      <AppInput label="Title" value={title} onChangeText={setTitle} placeholder="Brief incident title" />
+      <AppInput
+        label="Description"
+        value={description}
+        onChangeText={setDescription}
+        multiline
+        placeholder="Describe what happened…"
+      />
 
-      <Text style={{ fontWeight: '600', marginBottom: 6 }}>Choose Subcategory</Text>
+      {/* ── Category section ── */}
+      <SectionLabel>Subcategory</SectionLabel>
       {loadingCategories ? (
-        <ActivityIndicator style={{ marginVertical: 12 }} />
+        <ActivityIndicator
+          color={theme.primary}
+          style={{ marginVertical: Spacing.lg, alignSelf: 'flex-start' }}
+        />
       ) : (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing['2xl'] }}>
           {subcategories.map((item) => {
             const selected = selectedCategoryId === item.id;
             return (
               <Pressable
                 key={item.id}
                 onPress={() => setSelectedCategoryId(item.id)}
-                style={{
-                  borderWidth: 1,
-                  borderColor: selected ? '#0f766e' : '#d1d5db',
-                  backgroundColor: selected ? '#ccfbf1' : '#fff',
-                  borderRadius: 999,
-                  paddingVertical: 8,
-                  paddingHorizontal: 12,
-                }}
+                style={({ pressed }) => ({
+                  borderWidth: 1.5,
+                  borderColor: selected ? theme.primary : theme.border,
+                  backgroundColor: selected ? theme.primaryBg : theme.surface,
+                  borderRadius: Radius.full,
+                  paddingVertical: Spacing.sm,
+                  paddingHorizontal: Spacing.md,
+                  opacity: pressed ? 0.8 : 1,
+                })}
               >
-                <Text style={{ color: selected ? '#115e59' : '#374151' }}>{item.name}</Text>
+                <Text
+                  style={{
+                    color: selected ? theme.primary : theme.textSecondary,
+                    fontSize: FontSize.sm,
+                    fontWeight: selected ? FontWeight.semibold : FontWeight.normal,
+                  }}
+                >
+                  {item.name}
+                </Text>
               </Pressable>
             );
           })}
         </View>
       )}
 
-      <Pressable
-        onPress={handleLocate}
-        style={{ backgroundColor: '#1d4ed8', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 10 }}
-      >
-        <Text style={{ color: '#fff', fontWeight: '700' }}>{coords ? 'Location Captured' : 'Capture Location'}</Text>
-      </Pressable>
-
-      {coords ? (
-        <Text style={{ color: '#4b5563', marginBottom: 16 }}>
-          Lat: {coords.latitude.toFixed(5)} | Lng: {coords.longitude.toFixed(5)}
-        </Text>
-      ) : null}
-
-      <Pressable
-        onPress={handleCapturePhoto}
-        style={{ backgroundColor: '#4338ca', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 10 }}
-      >
-        <Text style={{ color: '#fff', fontWeight: '700' }}>{photo ? 'Photo Captured' : 'Capture Photo'}</Text>
-      </Pressable>
-
-      {photo ? (
-        <Text style={{ color: '#4b5563', marginBottom: 16 }}>
-          {photo.fileName} ({photo.sizeBytes} bytes)
-        </Text>
-      ) : null}
-
-      {error ? <Text style={{ color: '#dc2626', marginBottom: 10 }}>{error}</Text> : null}
-      {success ? <Text style={{ color: '#15803d', marginBottom: 10 }}>{success}</Text> : null}
-
-      <Pressable
-        onPress={handleSubmit}
-        disabled={loading}
-        style={{
-          backgroundColor: '#0f766e',
-          borderRadius: 10,
-          paddingVertical: 14,
-          alignItems: 'center',
-          opacity: loading ? 0.7 : 1,
-          marginBottom: 20,
-        }}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={{ color: '#fff', fontWeight: '700' }}>Submit Incident</Text>
+      {/* ── Location & photo section ── */}
+      <SectionLabel>Location & Media</SectionLabel>
+      <View style={{ gap: Spacing.md, marginBottom: Spacing['2xl'] }}>
+        <CaptureButton
+          onPress={handleLocate}
+          captured={!!coords}
+          defaultLabel="Capture GPS Location"
+          capturedLabel={
+            coords
+              ? `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`
+              : 'Location Captured'
+          }
+          icon="📍"
+        />
+        <CaptureButton
+          onPress={handleCapturePhoto}
+          captured={!!photo}
+          defaultLabel="Take Photo"
+          capturedLabel={photo ? photo.fileName : 'Photo Captured'}
+          icon="📷"
+        />
+        {photo && (
+          <Text
+            style={{
+              fontSize: FontSize.xs,
+              color: theme.textMuted,
+              marginTop: -Spacing.sm,
+              paddingHorizontal: Spacing.xs,
+            }}
+          >
+            {photo.sizeBytes ? `${(photo.sizeBytes / 1024).toFixed(1)} KB` : ''}
+            {photo.width && photo.height ? `  ·  ${photo.width}×${photo.height}` : ''}
+          </Text>
         )}
-      </Pressable>
+      </View>
+
+      {/* ── Status banners ── */}
+      {error ? <StatusBanner message={error} variant="error" /> : null}
+      {success ? <StatusBanner message={success} variant="success" /> : null}
+
+      {/* ── Submit ── */}
+      <AppButton
+        label="Submit Incident"
+        onPress={handleSubmit}
+        loading={loading}
+        variant="primary"
+      />
     </ScrollView>
   );
 }
