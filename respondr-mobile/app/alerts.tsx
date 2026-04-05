@@ -3,8 +3,114 @@ import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native
 import * as Notifications from 'expo-notifications';
 import { apiAuthRequest } from '../src/services/api';
 import type { AlertItem } from '../src/types';
+import { StatusBanner } from '../components/StatusBanner';
+import { useTheme } from '../hooks/use-theme-color';
+import { FontSize, FontWeight, Radius, Shadow, Spacing } from '../constants/theme';
 
+// ── Alert type → accent color mapping ───────────────────────────────────────
+const TYPE_COLORS: Record<string, string> = {
+  emergency: '#e63946',
+  warning:   '#f59e0b',
+  info:      '#3b82f6',
+  update:    '#0f9d8a',
+};
+
+function getTypeColor(type: string, fallback: string) {
+  return TYPE_COLORS[type?.toLowerCase()] ?? fallback;
+}
+
+// ── Alert card ───────────────────────────────────────────────────────────────
+function AlertCard({ item }: { item: AlertItem }) {
+  const theme = useTheme();
+  const accent = getTypeColor(item.type, theme.primary);
+  const dateString = new Date(item.created_at).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return (
+    <View
+      style={{
+        backgroundColor: theme.surface,
+        borderRadius: Radius.lg,
+        marginBottom: Spacing.md,
+        overflow: 'hidden',
+        flexDirection: 'row',
+        borderWidth: 1,
+        borderColor: theme.border,
+        ...Shadow.sm,
+      }}
+    >
+      {/* Left accent strip */}
+      <View style={{ width: 4, backgroundColor: accent }} />
+
+      {/* Content */}
+      <View style={{ flex: 1, padding: Spacing.lg }}>
+        {/* Type badge + timestamp row */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: Spacing.sm,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: accent + '1a', // 10% opacity
+              borderRadius: Radius.full,
+              paddingHorizontal: Spacing.sm,
+              paddingVertical: 3,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: FontSize.xs,
+                fontWeight: FontWeight.bold,
+                color: accent,
+                letterSpacing: 0.5,
+                textTransform: 'uppercase',
+              }}
+            >
+              {item.type}
+            </Text>
+          </View>
+          <Text style={{ fontSize: FontSize.xs, color: theme.textMuted }}>{dateString}</Text>
+        </View>
+
+        {/* Title */}
+        <Text
+          style={{
+            fontSize: FontSize.md,
+            fontWeight: FontWeight.bold,
+            color: theme.text,
+            marginBottom: Spacing.xs,
+            lineHeight: 22,
+          }}
+        >
+          {item.title}
+        </Text>
+
+        {/* Message */}
+        <Text
+          style={{
+            fontSize: FontSize.sm,
+            color: theme.textSecondary,
+            lineHeight: 20,
+          }}
+        >
+          {item.message}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Main screen ──────────────────────────────────────────────────────────────
 export default function AlertsScreen() {
+  const theme = useTheme();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -35,60 +141,104 @@ export default function AlertsScreen() {
       loadAlerts();
     });
 
-    return () => {
-      if (receivedSubscription.current) {
-        receivedSubscription.current.remove();
-      }
-    };
+    return () => { receivedSubscription.current?.remove(); };
   }, []);
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background }}>
+        <ActivityIndicator color={theme.primary} size="large" />
+        <Text style={{ color: theme.textSecondary, marginTop: Spacing.md, fontSize: FontSize.sm }}>
+          Loading alerts…
+        </Text>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <Text style={{ fontSize: 22, fontWeight: '700' }}>Alerts Feed</Text>
-        <Pressable onPress={loadAlerts} style={{ padding: 8, borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8 }}>
-          <Text>Refresh</Text>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      {/* ── Toolbar ── */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: Spacing.xl,
+          paddingVertical: Spacing.lg,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.border,
+          backgroundColor: theme.surface,
+        }}
+      >
+        <View>
+          <Text
+            style={{
+              fontSize: FontSize.xl,
+              fontWeight: FontWeight.extrabold,
+              color: theme.text,
+              letterSpacing: 0.2,
+            }}
+          >
+            Alerts Feed
+          </Text>
+          <Text style={{ fontSize: FontSize.xs, color: theme.textSecondary, marginTop: 2 }}>
+            {alerts.length} alert{alerts.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={loadAlerts}
+          style={({ pressed }) => ({
+            backgroundColor: theme.background,
+            borderWidth: 1,
+            borderColor: theme.border,
+            borderRadius: Radius.md,
+            paddingVertical: Spacing.sm,
+            paddingHorizontal: Spacing.md,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: Spacing.xs,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Text style={{ fontSize: FontSize.sm, color: theme.textSecondary, fontWeight: FontWeight.medium }}>
+            ↻ Refresh
+          </Text>
         </Pressable>
       </View>
 
-      {lastNotificationTitle ? (
-        <Text style={{ color: '#2563eb', marginBottom: 10 }}>Last push received: {lastNotificationTitle}</Text>
-      ) : null}
+      {/* ── Banners ── */}
+      <View style={{ paddingHorizontal: Spacing.xl, paddingTop: lastNotificationTitle || error ? Spacing.md : 0 }}>
+        {lastNotificationTitle ? (
+          <StatusBanner
+            message={`Push received: ${lastNotificationTitle}`}
+            variant="info"
+          />
+        ) : null}
+        {error ? <StatusBanner message={error} variant="error" /> : null}
+      </View>
 
-      {error ? <Text style={{ color: '#dc2626', marginBottom: 10 }}>{error}</Text> : null}
-
+      {/* ── List ── */}
       {!error && alerts.length === 0 ? (
-        <Text style={{ color: '#4b5563' }}>No alerts yet.</Text>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm }}>
+          <Text style={{ fontSize: 36 }}>📭</Text>
+          <Text style={{ color: theme.textSecondary, fontSize: FontSize.md, fontWeight: FontWeight.medium }}>
+            No alerts yet
+          </Text>
+          <Text style={{ color: theme.textMuted, fontSize: FontSize.sm }}>
+            Pull to refresh or wait for push notifications.
+          </Text>
+        </View>
       ) : (
         <FlatList
           data={alerts}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View
-              style={{
-                borderWidth: 1,
-                borderColor: '#e5e7eb',
-                borderRadius: 10,
-                padding: 12,
-                marginBottom: 10,
-                backgroundColor: '#fff',
-              }}
-            >
-              <Text style={{ fontWeight: '700', marginBottom: 4 }}>{item.title}</Text>
-              <Text style={{ color: '#4b5563', marginBottom: 8 }}>{item.message}</Text>
-              <Text style={{ fontSize: 12, color: '#6b7280' }}>
-                {new Date(item.created_at).toLocaleString()} | {item.type}
-              </Text>
-            </View>
-          )}
+          contentContainerStyle={{
+            paddingHorizontal: Spacing.xl,
+            paddingTop: Spacing.lg,
+            paddingBottom: Spacing['3xl'],
+          }}
+          renderItem={({ item }) => <AlertCard item={item} />}
         />
       )}
     </View>

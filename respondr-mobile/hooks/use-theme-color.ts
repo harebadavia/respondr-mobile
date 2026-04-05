@@ -17,3 +17,9 @@ export function useThemeColor(
 
   return Colors[theme][colorName];
 }
+
+/** Convenience: returns the full color object for the active theme. */
+export function useTheme() {
+  const scheme = (useColorScheme() ?? 'light') as ThemeName;
+  return Colors[scheme];
+}
