@@ -145,14 +145,14 @@ export const Radius = {
 };
 
 export const FontSize = {
-  xs: 11,
-  sm: 13,
-  md: 15,
-  lg: 17,
-  xl: 20,
-  '2xl': 24,
-  '3xl': 28,
-  '4xl': 34,
+  xs: 12,
+  sm: 14,
+  md: 16,
+  lg: 18,
+  xl: 21,
+  '2xl': 25,
+  '3xl': 29,
+  '4xl': 35,
 };
 
 export const FontWeight = {
