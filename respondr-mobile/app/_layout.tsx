@@ -10,13 +10,13 @@ import {
   View,
 } from 'react-native';
 import { AuthProvider } from '../src/context/AuthContext';
-import { Colors, FontSize, FontWeight, Radius, Shadow, Spacing } from '../constants/theme';
+import { Colors, FontWeight, Radius, Shadow, Spacing } from '../constants/theme';
 
 // ── Tab definitions ──────────────────────────────────────────────────────────
 const TABS = [
-  { name: 'home', label: 'My Reports', icon: 'document-text-outline', activeIcon: 'document-text' },
-  { name: 'map', label: 'Map', icon: 'map-outline', activeIcon: 'map' },
+  { name: 'home', label: 'Reports', icon: 'document-text-outline', activeIcon: 'document-text' },
   { name: 'alerts', label: 'Alerts', icon: 'notifications-outline', activeIcon: 'notifications' },
+  { name: 'announcements', label: 'Announcements', icon: 'megaphone-outline', activeIcon: 'megaphone' },
 ] as const;
 
 // ── Custom pill tab bar ──────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ function PillTabBar({ state, navigation }: { state: any; navigation: any }) {
     }).start();
   }, [activeTabIndex, highlightX, tabWidth]);
 
-  if (activeRouteName && ['index', 'login', 'register', 'incident-create'].includes(activeRouteName)) {
+  if (activeRouteName && ['index', 'login', 'register', 'incident-create', 'incident-detail', 'profile', 'map'].includes(activeRouteName)) {
     return null;
   }
 
@@ -122,7 +122,7 @@ function PillTabBar({ state, navigation }: { state: any; navigation: any }) {
               <Text
                 style={{
                   color: '#ffffff',
-                  fontSize: FontSize.sm,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.2,
                 }}
@@ -159,9 +159,10 @@ export default function RootLayout() {
         <Tabs.Screen name="register" options={{ href: null, headerShown: false }} />
 
         {/* ── Main tabs ── */}
-        <Tabs.Screen name="home"   options={{ headerShown: false, title: 'My Reports' }} />
-        <Tabs.Screen name="map"    options={{ title: 'Map' }} />
+        <Tabs.Screen name="home"   options={{ headerShown: false, title: 'Reports' }} />
         <Tabs.Screen name="alerts" options={{ title: 'Alerts' }} />
+        <Tabs.Screen name="announcements" options={{ title: 'Announcements' }} />
+        <Tabs.Screen name="map"    options={{ href: null, title: 'Map' }} />
 
         {/* ── Hidden modal ── */}
         <Tabs.Screen
@@ -178,9 +179,45 @@ export default function RootLayout() {
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
-                <Text style={{ color: theme.headerTint, fontSize: FontSize.sm, fontWeight: FontWeight.semibold }}>
-                  Back
-                </Text>
+                <Ionicons name="chevron-back" size={22} color={theme.headerTint} />
+              </Pressable>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="incident-detail"
+          options={{
+            href: null,
+            title: 'Report Details',
+            headerLeft: () => (
+              <Pressable
+                onPress={() => router.back()}
+                style={({ pressed }) => ({
+                  paddingHorizontal: Spacing.md,
+                  paddingVertical: Spacing.xs,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Ionicons name="chevron-back" size={22} color={theme.headerTint} />
+              </Pressable>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            href: null,
+            title: 'Profile',
+            headerLeft: () => (
+              <Pressable
+                onPress={() => router.back()}
+                style={({ pressed }) => ({
+                  paddingHorizontal: Spacing.md,
+                  paddingVertical: Spacing.xs,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Ionicons name="chevron-back" size={22} color={theme.headerTint} />
               </Pressable>
             ),
           }}

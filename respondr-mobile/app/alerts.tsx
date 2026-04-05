@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { apiAuthRequest } from '../src/services/api';
 import type { ApiError } from '../src/services/api';
@@ -113,6 +113,7 @@ function AlertCard({ item }: { item: AlertItem }) {
 export default function AlertsScreen() {
   const theme = useTheme();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [query, setQuery] = useState('');
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -149,6 +150,16 @@ export default function AlertsScreen() {
     return () => { receivedSubscription.current?.remove(); };
   }, []);
 
+  const filteredAlerts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return alerts;
+    return alerts.filter((item) =>
+      item.title.toLowerCase().includes(q) ||
+      item.message.toLowerCase().includes(q) ||
+      String(item.type || '').toLowerCase().includes(q)
+    );
+  }, [alerts, query]);
+
   if (initialLoading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background }}>
@@ -162,70 +173,8 @@ export default function AlertsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
-      {/* ── Toolbar ── */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: Spacing.xl,
-          paddingVertical: Spacing.lg,
-          borderBottomWidth: 1,
-          borderBottomColor: theme.border,
-          backgroundColor: theme.surface,
-        }}
-      >
-        <View>
-          <Text
-            style={{
-              fontSize: FontSize.xl,
-              fontWeight: FontWeight.extrabold,
-              color: theme.text,
-              letterSpacing: 0.2,
-            }}
-          >
-            Alerts Feed
-          </Text>
-          <Text style={{ fontSize: FontSize.xs, color: theme.textSecondary, marginTop: 2 }}>
-            {alerts.length} alert{alerts.length !== 1 ? 's' : ''}
-          </Text>
-        </View>
-
-        <Pressable
-          onPress={() => loadAlerts('refresh')}
-          disabled={refreshing}
-          style={({ pressed }) => ({
-            backgroundColor: theme.background,
-            borderWidth: 1,
-            borderColor: theme.border,
-            borderRadius: Radius.md,
-            paddingVertical: Spacing.sm,
-            paddingHorizontal: Spacing.md,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: Spacing.xs,
-            opacity: pressed || refreshing ? 0.7 : 1,
-          })}
-        >
-          <Text style={{ fontSize: FontSize.sm, color: theme.textSecondary, fontWeight: FontWeight.medium }}>
-            {refreshing ? 'Refreshing…' : '↻ Refresh'}
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* ── Banners ── */}
-      <View style={{ paddingHorizontal: Spacing.xl, paddingTop: lastNotificationTitle || error ? Spacing.md : 0 }}>
-        {lastNotificationTitle ? (
-          <StatusBanner
-            message={`Push received: ${lastNotificationTitle}`}
-            variant="info"
-          />
-        ) : null}
-        {error ? <StatusBanner message={error} variant="error" /> : null}
-      </View>
-
       {/* ── List ── */}
-      {!error && alerts.length === 0 ? (
+      {!error && filteredAlerts.length === 0 ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm }}>
           <Text style={{ fontSize: 36 }}>📭</Text>
           <Text style={{ color: theme.textSecondary, fontSize: FontSize.md, fontWeight: FontWeight.medium }}>
@@ -237,13 +186,80 @@ export default function AlertsScreen() {
         </View>
       ) : (
         <FlatList
-          data={alerts}
+          data={filteredAlerts}
           keyExtractor={(item) => item.id}
           refreshing={refreshing}
           onRefresh={() => loadAlerts('refresh')}
+          ListHeaderComponent={
+            <View style={{ marginTop: Spacing.xl, marginBottom: Spacing.lg, gap: Spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                  <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.extrabold, color: theme.text, letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                    Alerts Feed
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: theme.primaryBg,
+                      borderRadius: Radius.full,
+                      paddingHorizontal: Spacing.sm,
+                      paddingVertical: 2,
+                      borderWidth: 1,
+                      borderColor: theme.border,
+                    }}
+                  >
+                    <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: theme.primary }}>
+                      {alerts.length}
+                    </Text>
+                  </View>
+                </View>
+                <Pressable
+                  onPress={() => loadAlerts('refresh')}
+                  disabled={refreshing}
+                  style={({ pressed }) => ({
+                    backgroundColor: theme.headerBg,
+                    borderRadius: Radius.full,
+                    paddingVertical: Spacing.sm,
+                    paddingHorizontal: Spacing.lg,
+                    opacity: pressed || refreshing ? 0.8 : 1,
+                  })}
+                >
+                  <Text style={{ color: '#fff', fontSize: FontSize.sm, fontWeight: FontWeight.semibold }}>
+                    {refreshing ? 'Refreshing…' : 'Refresh'}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: theme.surface,
+                  borderRadius: Radius.full,
+                  borderWidth: 1,
+                  borderColor: theme.border,
+                  paddingHorizontal: Spacing.lg,
+                  height: 46,
+                  gap: Spacing.sm,
+                }}
+              >
+                <Text style={{ fontSize: FontSize.md, color: theme.textMuted }}>🔍</Text>
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search alerts"
+                  placeholderTextColor={theme.textMuted}
+                  style={{ flex: 1, fontSize: FontSize.md, color: theme.text, height: '100%' }}
+                />
+              </View>
+
+              {lastNotificationTitle ? (
+                <StatusBanner message={`Push received: ${lastNotificationTitle}`} variant="info" />
+              ) : null}
+              {error ? <StatusBanner message={error} variant="error" /> : null}
+            </View>
+          }
           contentContainerStyle={{
             paddingHorizontal: Spacing.xl,
-            paddingTop: Spacing.lg,
             paddingBottom: Spacing['3xl'],
           }}
           renderItem={({ item }) => <AlertCard item={item} />}
