@@ -38,7 +38,16 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow RESPONDR to access photos.",
+          "cameraPermission": "Allow RESPONDR to use the camera."
+        }
+      ],
+      "expo-location",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,
