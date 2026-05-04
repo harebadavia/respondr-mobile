@@ -72,6 +72,8 @@ export default function AnnouncementsScreen() {
     );
   }, [announcements, query]);
 
+  const hasSearchQuery = query.trim().length > 0;
+
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background }}>
@@ -85,94 +87,98 @@ export default function AnnouncementsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
-      {!error && filteredAnnouncements.length === 0 ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm }}>
-          <Text style={{ fontSize: 36 }}>📢</Text>
-          <Text style={{ color: theme.textSecondary, fontSize: FontSize.md, fontWeight: FontWeight.medium }}>
-            No announcements yet
-          </Text>
-          <Text style={{ color: theme.textMuted, fontSize: FontSize.sm }}>
-            Pull to refresh and check again later.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredAnnouncements}
-          keyExtractor={(item) => item.id}
-          refreshing={refreshing}
-          onRefresh={() => loadAnnouncements('refresh')}
-          ListHeaderComponent={
-            <View style={{ marginTop: Spacing.xl, marginBottom: Spacing.lg, gap: Spacing.md }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                  <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.extrabold, color: theme.text, letterSpacing: 1.2, textTransform: 'uppercase' }}>
-                    Announcements
-                  </Text>
-                  <View
-                    style={{
-                      backgroundColor: theme.primaryBg,
-                      borderRadius: Radius.full,
-                      paddingHorizontal: Spacing.sm,
-                      paddingVertical: 2,
-                      borderWidth: 1,
-                      borderColor: theme.border,
-                    }}
-                  >
-                    <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: theme.primary }}>
-                      {announcements.length}
-                    </Text>
-                  </View>
-                </View>
-                <Pressable
-                  onPress={() => loadAnnouncements('refresh')}
-                  disabled={refreshing}
-                  style={({ pressed }) => ({
-                    backgroundColor: theme.headerBg,
+      <FlatList
+        data={filteredAnnouncements}
+        keyExtractor={(item) => item.id}
+        refreshing={refreshing}
+        onRefresh={() => loadAnnouncements('refresh')}
+        ListHeaderComponent={
+          <View style={{ marginTop: Spacing.xl, marginBottom: Spacing.lg, gap: Spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.extrabold, color: theme.text, letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                  Announcements
+                </Text>
+                <View
+                  style={{
+                    backgroundColor: theme.primaryBg,
                     borderRadius: Radius.full,
-                    paddingVertical: Spacing.sm,
-                    paddingHorizontal: Spacing.lg,
-                    opacity: pressed || refreshing ? 0.8 : 1,
-                  })}
+                    paddingHorizontal: Spacing.sm,
+                    paddingVertical: 2,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                  }}
                 >
-                  <Text style={{ color: '#fff', fontSize: FontSize.sm, fontWeight: FontWeight.semibold }}>
-                    {refreshing ? 'Refreshing…' : 'Refresh'}
+                  <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: theme.primary }}>
+                    {announcements.length}
                   </Text>
-                </Pressable>
+                </View>
               </View>
-
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: theme.surface,
+              <Pressable
+                onPress={() => loadAnnouncements('refresh')}
+                disabled={refreshing}
+                style={({ pressed }) => ({
+                  backgroundColor: theme.headerBg,
                   borderRadius: Radius.full,
-                  borderWidth: 1,
-                  borderColor: theme.border,
+                  paddingVertical: Spacing.sm,
                   paddingHorizontal: Spacing.lg,
-                  height: 46,
-                  gap: Spacing.sm,
-                }}
+                  opacity: pressed || refreshing ? 0.8 : 1,
+                })}
               >
-                <Text style={{ fontSize: FontSize.md, color: theme.textMuted }}>🔍</Text>
-                <TextInput
-                  value={query}
-                  onChangeText={setQuery}
-                  placeholder="Search announcements"
-                  placeholderTextColor={theme.textMuted}
-                  style={{ flex: 1, fontSize: FontSize.md, color: theme.text, height: '100%' }}
-                />
-              </View>
-
-              {error ? <StatusBanner message={error} variant="error" /> : null}
+                <Text style={{ color: '#fff', fontSize: FontSize.sm, fontWeight: FontWeight.semibold }}>
+                  {refreshing ? 'Refreshing…' : 'Refresh'}
+                </Text>
+              </Pressable>
             </View>
-          }
-          contentContainerStyle={{
-            paddingHorizontal: Spacing.xl,
-            paddingBottom: Spacing['3xl'],
-          }}
-          renderItem={({ item }) => <AnnouncementCard item={item} />}
-        />
-      )}
+
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: theme.surface,
+                borderRadius: Radius.full,
+                borderWidth: 1,
+                borderColor: theme.border,
+                paddingHorizontal: Spacing.lg,
+                height: 46,
+                gap: Spacing.sm,
+              }}
+            >
+              <Text style={{ fontSize: FontSize.md, color: theme.textMuted }}>🔍</Text>
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search announcements"
+                placeholderTextColor={theme.textMuted}
+                style={{ flex: 1, fontSize: FontSize.md, color: theme.text, height: '100%' }}
+              />
+            </View>
+
+            {error ? <StatusBanner message={error} variant="error" /> : null}
+          </View>
+        }
+        ListEmptyComponent={
+          !error ? (
+            <View style={{ alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, paddingTop: Spacing['2xl'] }}>
+              <Text style={{ fontSize: 36 }}>{hasSearchQuery ? '🔎' : '📢'}</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: FontSize.md, fontWeight: FontWeight.medium }}>
+                {hasSearchQuery ? 'No matching announcements' : 'No announcements yet'}
+              </Text>
+              <Text style={{ color: theme.textMuted, fontSize: FontSize.sm, textAlign: 'center' }}>
+                {hasSearchQuery
+                  ? 'Try a different keyword or clear your search.'
+                  : 'No announcements have been posted yet. Pull to refresh and check again later.'}
+              </Text>
+            </View>
+          ) : null
+        }
+        contentContainerStyle={{
+          paddingHorizontal: Spacing.xl,
+          paddingBottom: Spacing['3xl'],
+          flexGrow: filteredAnnouncements.length === 0 ? 1 : 0,
+        }}
+        renderItem={({ item }) => <AnnouncementCard item={item} />}
+      />
     </View>
   );
 }

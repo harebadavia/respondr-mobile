@@ -77,7 +77,7 @@ function ReportCard({ item }: { item: IncidentSummary }) {
 }
 
 export default function HomeScreen() {
-  const { backendUser } = useAuth();
+  const { backendUser, isAuthenticated } = useAuth();
   const theme = useTheme();
   const [query, setQuery] = useState('');
   const [reports, setReports] = useState<IncidentSummary[]>([]);
@@ -87,6 +87,15 @@ export default function HomeScreen() {
 
   const initials = `${backendUser?.first_name?.[0] ?? ''}${backendUser?.last_name?.[0] ?? ''}`.toUpperCase();
 
+  const getErrorMessage = (err: unknown) => {
+    if (err && typeof err === 'object' && 'message' in err) {
+      const message = (err as { message?: unknown }).message;
+      if (typeof message === 'string' && message.trim()) return message;
+    }
+    if (err instanceof Error && err.message.trim()) return err.message;
+    return 'Failed to load reports';
+  };
+
   const loadReports = async (mode: 'initial' | 'refresh' = 'refresh') => {
     if (mode === 'initial') setLoading(true);
     if (mode === 'refresh') setRefreshing(true);
@@ -95,8 +104,7 @@ export default function HomeScreen() {
       const data = await apiAuthRequest<IncidentSummary[]>('/incidents/my');
       setReports(Array.isArray(data) ? data : []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load reports';
-      setError(message);
+      setError(getErrorMessage(err));
     } finally {
       if (mode === 'initial') setLoading(false);
       if (mode === 'refresh') setRefreshing(false);
@@ -104,8 +112,14 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setReports([]);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     loadReports('initial');
-  }, []);
+  }, [isAuthenticated]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -125,7 +139,10 @@ export default function HomeScreen() {
           backgroundColor: theme.headerBg,
           borderBottomLeftRadius: 28,
           borderBottomRightRadius: 28,
-          paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + Spacing.lg : 0,
+          paddingTop:
+            Platform.OS === 'android'
+              ? (StatusBar.currentHeight ?? 0) + Spacing['2xl']
+              : Spacing['2xl'],
           paddingHorizontal: Spacing.xl,
           paddingBottom: Spacing.xl,
         }}
@@ -174,20 +191,40 @@ export default function HomeScreen() {
               <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.extrabold, color: theme.text, letterSpacing: 1.2, textTransform: 'uppercase' }}>
                 My Reports
               </Text>
-              <Pressable
-                onPress={() => router.push('/incident-create')}
-                style={({ pressed }) => ({
-                  backgroundColor: theme.headerBg,
-                  borderRadius: Radius.full,
-                  paddingVertical: Spacing.sm,
-                  paddingHorizontal: Spacing.lg,
-                  opacity: pressed ? 0.8 : 1,
-                })}
-              >
-                <Text style={{ color: Palette.white, fontSize: FontSize.sm, fontWeight: FontWeight.semibold }}>
-                  File a report
-                </Text>
-              </Pressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                <Pressable
+                  disabled={loading || refreshing}
+                  onPress={() => loadReports('refresh')}
+                  style={({ pressed }) => ({
+                    backgroundColor: theme.surface,
+                    borderRadius: Radius.full,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                    paddingVertical: Spacing.sm,
+                    paddingHorizontal: Spacing.lg,
+                    opacity: pressed || loading || refreshing ? 0.7 : 1,
+                  })}
+                >
+                  <Text style={{ color: theme.text, fontSize: FontSize.sm, fontWeight: FontWeight.semibold }}>
+                    {refreshing ? 'Refreshing...' : 'Refresh'}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push('/incident-create')}
+                  style={({ pressed }) => ({
+                    backgroundColor: theme.headerBg,
+                    borderRadius: Radius.full,
+                    paddingVertical: Spacing.sm,
+                    paddingHorizontal: Spacing.lg,
+                    opacity: pressed ? 0.8 : 1,
+                  })}
+                >
+                  <Text style={{ color: Palette.white, fontSize: FontSize.sm, fontWeight: FontWeight.semibold }}>
+                    File a report
+                  </Text>
+                </Pressable>
+              </View>
             </View>
 
             <View

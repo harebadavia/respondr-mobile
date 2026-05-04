@@ -15,9 +15,13 @@ import { Colors, FontWeight, Radius, Shadow, Spacing } from '../constants/theme'
 // ── Tab definitions ──────────────────────────────────────────────────────────
 const TABS = [
   { name: 'home', label: 'Reports', icon: 'document-text-outline', activeIcon: 'document-text' },
+  { name: 'map', label: 'Map', icon: 'map-outline', activeIcon: 'map' },
   { name: 'alerts', label: 'Alerts', icon: 'notifications-outline', activeIcon: 'notifications' },
   { name: 'announcements', label: 'Announcements', icon: 'megaphone-outline', activeIcon: 'megaphone' },
 ] as const;
+
+const ACTIVE_TAB_GROW = 2.2;
+const INACTIVE_TAB_GROW = 1;
 
 // ── Custom pill tab bar ──────────────────────────────────────────────────────
 function PillTabBar({ state, navigation }: { state: any; navigation: any }) {
@@ -25,25 +29,50 @@ function PillTabBar({ state, navigation }: { state: any; navigation: any }) {
   const activeRouteName = state.routes?.[state.index]?.name as string | undefined;
   const [barWidth, setBarWidth] = useState(0);
   const highlightX = useRef(new Animated.Value(0)).current;
+  const highlightWidth = useRef(new Animated.Value(0)).current;
 
   const activeTabIndex = useMemo(() => {
     const idx = TABS.findIndex((tab) => tab.name === activeRouteName);
     return idx >= 0 ? idx : 0;
   }, [activeRouteName]);
 
-  const tabWidth = barWidth > 0 ? (barWidth - Spacing.sm * 2) / TABS.length : 0;
+  const tabWidths = useMemo(() => {
+    if (!barWidth) return [];
+    const availableWidth = barWidth - Spacing.sm * 2;
+    const totalGrow = ACTIVE_TAB_GROW + INACTIVE_TAB_GROW * (TABS.length - 1);
+    const baseWidth = availableWidth / totalGrow;
+
+    return TABS.map((_, index) =>
+      (index === activeTabIndex ? ACTIVE_TAB_GROW : INACTIVE_TAB_GROW) * baseWidth
+    );
+  }, [activeTabIndex, barWidth]);
+
+  const activeOffsetX = useMemo(
+    () => tabWidths.slice(0, activeTabIndex).reduce((sum, width) => sum + width, 0),
+    [activeTabIndex, tabWidths]
+  );
+
+  const activeWidth = tabWidths[activeTabIndex] || 0;
 
   useEffect(() => {
-    if (!tabWidth) return;
-    Animated.timing(highlightX, {
-      toValue: activeTabIndex * tabWidth,
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [activeTabIndex, highlightX, tabWidth]);
+    if (!activeWidth) return;
+    Animated.parallel([
+      Animated.timing(highlightX, {
+        toValue: activeOffsetX,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(highlightWidth, {
+        toValue: activeWidth,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [activeOffsetX, activeWidth, highlightWidth, highlightX]);
 
-  if (activeRouteName && ['index', 'login', 'register', 'incident-create', 'incident-detail', 'profile', 'map'].includes(activeRouteName)) {
+  if (activeRouteName && ['index', 'login', 'register', 'incident-create', 'incident-detail', 'profile'].includes(activeRouteName)) {
     return null;
   }
 
@@ -64,7 +93,7 @@ function PillTabBar({ state, navigation }: { state: any; navigation: any }) {
         ...Shadow.lg,
       }}
     >
-      {tabWidth > 0 ? (
+      {activeWidth > 0 ? (
         <Animated.View
           pointerEvents="none"
           style={{
@@ -72,7 +101,7 @@ function PillTabBar({ state, navigation }: { state: any; navigation: any }) {
             left: Spacing.sm,
             top: Spacing.sm,
             height: 40,
-            width: tabWidth,
+            width: highlightWidth,
             borderRadius: Radius.full,
             backgroundColor: 'rgba(255,255,255,0.16)',
             transform: [{ translateX: highlightX }],
@@ -80,7 +109,7 @@ function PillTabBar({ state, navigation }: { state: any; navigation: any }) {
         />
       ) : null}
 
-      {TABS.map((tab) => {
+      {TABS.map((tab, index) => {
         const route = state.routes.find((r: any) => r.name === tab.name);
         const isFocused = route && state.index === state.routes.indexOf(route);
 
@@ -101,7 +130,9 @@ function PillTabBar({ state, navigation }: { state: any; navigation: any }) {
             key={tab.name}
             onPress={onPress}
             style={({ pressed }) => ({
-              flex: 1,
+              width: tabWidths[index] || undefined,
+              flexGrow: tabWidths[index] ? 0 : isFocused ? ACTIVE_TAB_GROW : INACTIVE_TAB_GROW,
+              flexBasis: tabWidths[index] ? undefined : 0,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
@@ -160,9 +191,9 @@ export default function RootLayout() {
 
         {/* ── Main tabs ── */}
         <Tabs.Screen name="home"   options={{ headerShown: false, title: 'Reports' }} />
+        <Tabs.Screen name="map"    options={{ title: 'Map' }} />
         <Tabs.Screen name="alerts" options={{ title: 'Alerts' }} />
         <Tabs.Screen name="announcements" options={{ title: 'Announcements' }} />
-        <Tabs.Screen name="map"    options={{ href: null, title: 'Map' }} />
 
         {/* ── Hidden modal ── */}
         <Tabs.Screen

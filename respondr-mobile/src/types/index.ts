@@ -33,6 +33,17 @@ export type AnnouncementItem = {
   created_at: string;
 };
 
+export type LocationItem = {
+  id: string;
+  name: string;
+  description: string | null;
+  latitude: number;
+  longitude: number;
+  is_active: boolean;
+  created_at: string;
+  created_by: string | null;
+};
+
 export type IncidentSummary = {
   id: string;
   reported_by: string;
